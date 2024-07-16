@@ -174,3 +174,4 @@ tests/
 pyproject.toml
 replit.nix
 replit_zip_error_log.txt
+tests/
