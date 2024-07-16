@@ -17,19 +17,88 @@ Directional lighting\
 Mouse movement
 
 ## Release Notes:
-A1.0 (1-10-24):\
-A1.1 (1-12-24):\
-A1.2 (1-16-24):\
-A1.3 (1-17-24):\
-A1.4 (1-18-24):\
-A1.5 (1-19-24):\
-A1.6 (1-27-24):\
-A1.7 (5-21-24):\
-A1.8 (5-22-24):\
-A1.9 (5-22-24):\
-B1.0 (6-08-24):\
+### A1.0 (1-10-24):
+Rotating cube!\
+Camera, Object, Scene, Renderer classes\
+Added Rotation function\
+Added Basic movement\
+Added Position and Rotation telemetry\
+Added Backgrounds\
+Added Translation function\
+Added Update display function\
+Added Vertex projection function
+### A1.1 (1-12-24):
+Fruity utah teapot\
+Added Dynamic directional lighting\
+Added Obj mesh importer\
+Added Flat shading\
+Added Position based color material\
+Added Triangle sorting\
+Added Numba optimizations\
+Added Light object\
+Added New projection methods\
+Added Point rendering function\
+Added Speed up and down keys
+### A1.2 (1-16-24):
+Preparing projection matrix\
+Mountain!
+### A1.3 (1-17-24):
+Updated projection matrix and using it now!\
+Spinning teapot!\
+Added Matrix Vector multiplication
+### A1.4 (1-18-24):
+Fullscreen!\
+Only teapot...\
+Added Triangle scanline renderer\
+Updated renderpoints
+### A1.5 (1-19-24):
+Combined all functions to one rendertris function\
+Preparing textures
+### A1.6 (1-27-24):
+Rotating sheepy cube!\
+Box mountains!\
+Fixed Numba compilations\
+Added Edge clipping\
+Added Material 1 for same uv\
+Added Material 2 for uvmapping\
+Added Mouse movement\
+Preparing Obj texcoordinate importation\
+Added BLACK FOG\
+Added Z-buffer\
+Optimized rendertris\
+Added Loading screen
+### A1.7 (5-21-24):
+Skin mountains!\
+Really broken\
+1.5 esr\
+Broken edge clipping
+### A1.8 (5-22-24):
+Rotating croc\
+Broken texture rendering\
+Moved importer into arcimport\
+Added Obj texcoordinate importation\
+Added Perspective correct texture mapping\
+Added FPS counter
+### A1.9 (5-22-24):
+Rotating cube again!\
+Fixed lines\
+More broken dots\
+Preparing for clipping
+### B1.0 (6-08-24):
 Added Clipping\
-R1.0 (7/14/24):\
+Unoptimized Clipping\
+Added Plane intersect function
+### R1.0 (7/14/24):
 Optimized clipping\
-R1.1 (7/16/24):\
+Optimized projection\
+Fixed dots a few\
+Added Colored fog\
+Added Smooth movement
+### R1.1 (7/16/24):
+LARGE optimizations to many functions\
+Fixed all dots\
+Position and rotation is now baked\
+Added movement speed\
+Corrected Smooth movment\
+Corrected colored fog\
 Indev.
