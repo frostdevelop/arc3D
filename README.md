@@ -14,7 +14,7 @@ Vertex transform function\
 Vertex rotation function\
 Solid color Background\
 Directional lighting\
-Mouse movement\
+Mouse movement
 
 ## Release Notes:
 A1.0 (1-10-24):\
