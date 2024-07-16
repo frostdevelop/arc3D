@@ -99,6 +99,7 @@ Added Smooth movement
 LARGE optimizations to many functions\
 Fixed all dots\
 Position and rotation is now baked\
+Found clipping bug\
 Added movement speed\
 Corrected Smooth movment\
 Corrected colored fog\
