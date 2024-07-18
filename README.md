@@ -108,3 +108,12 @@ Corrected Smooth movment\
 Corrected Clipping plane transform\
 ### R1.2 (//24):
 Indev.
+### Planned improvements
+Optimizations\
+AA based on Xiaolin Wu's line algorithm\
+FXAA\
+Goraud shading\
+Phong shading\
+Point lighting\
+Normal mapping\
+Skyboxes
