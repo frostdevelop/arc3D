@@ -99,8 +99,10 @@ Added Smooth movement
 LARGE optimizations to many functions\
 Fixed all dots\
 Position and rotation is now baked\
-Corrected clipping plane transform\
 Added movement speed\
+Added Specular lighting\
+Added and Fixed Colored fog\
+Added Linear interpolation\
 Corrected Smooth movment\
-Corrected colored fog\
+Corrected Clipping plane transform\
 Indev.
