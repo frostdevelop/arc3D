@@ -1,6 +1,6 @@
 # arc3D
 the Arc3D python software rendering repository (Originally on Replit in Jan 9, 2024)
-![Funny demo](/images/Demo1.1.png)
+![Funny demo](/images/Demo1.1.png)\
 Release 1.0:
 ![Funny demo](/images/Demo.png)
 ## Features:
