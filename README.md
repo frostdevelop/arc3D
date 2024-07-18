@@ -95,7 +95,7 @@ Optimized projection\
 Fixed dots a few\
 Added Colored fog\
 Added Smooth movement
-### R1.1 (7/16/24):
+### R1.1 (7/17/24):
 LARGE optimizations to many functions\
 Fixed all dots\
 Position and rotation is now baked\
@@ -105,4 +105,5 @@ Added and Fixed Colored fog\
 Added Linear interpolation\
 Corrected Smooth movment\
 Corrected Clipping plane transform\
+### R1.2 (//24):
 Indev.
