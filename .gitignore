@@ -167,11 +167,9 @@ cython_debug/
 .local/
 .pythonlibs/
 .upm/
-tests/
 .breakpoints
 .replit
 #poetry.lock
 pyproject.toml
 replit.nix
 replit_zip_error_log.txt
-tests/
