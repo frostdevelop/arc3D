@@ -110,10 +110,10 @@ Corrected Clipping plane transform\
 Indev.
 ### Planned improvements
 Optimizations\
-AA based on Xiaolin Wu's line algorithm\
 FXAA\
 Goraud shading\
 Phong shading\
 Point lighting\
 Normal mapping\
-Skyboxes
+Skyboxes\
+Mocaps for reflection
