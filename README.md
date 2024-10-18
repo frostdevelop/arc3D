@@ -116,4 +116,4 @@ Phong shading\
 Point lighting\
 Normal mapping\
 Skyboxes\
-Mocaps for reflection
+Matcaps for reflection
