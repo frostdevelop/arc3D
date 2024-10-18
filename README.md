@@ -1,6 +1,6 @@
+![Arc3D logo (1/16/24)](https://github.com/user-attachments/assets/2036a71c-95fd-43ff-b8f6-196b647d4500)
 # arc3D
 the Arc3D python software rendering repository (Originally on Replit in Jan 9, 2024)
-![Arc3D logo (1/16/24)](https://github.com/user-attachments/assets/2036a71c-95fd-43ff-b8f6-196b647d4500)
 ![Funny demo](/images/Demo1.1.png)\
 Release 1.0:\
 ![Funny demo](/images/Demo.png)
