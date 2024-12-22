@@ -114,7 +114,11 @@ Optimizations\
 FXAA\
 Goraud shading\
 Phong shading\
-Point lighting\
+Point lighting\aw
 Normal mapping\
 Skyboxes\
-Matcaps for reflection
+Matcaps for reflection\
+Neon material\
+Material Pass\
+Neon glow (Gaussian)\
+Convolution Kernel Filter
