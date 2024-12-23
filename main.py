@@ -3,7 +3,7 @@ import math
 import pygame as pg
 from pygame.locals import QUIT
 from arcimport import readobj
-from arc import *
+from arcdev import *
 
 '''
 Material Settings:
@@ -83,7 +83,7 @@ def main():
     #"""
 
     renderer.render(scene)
-    screen.blit(pg.surfarray.make_surface(renderer.surface), (0, 0))
+    pg.surfarray.blit_array(screen, renderer.surface)
 
     #"""
     positiontext = font.render(

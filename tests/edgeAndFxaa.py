@@ -54,6 +54,9 @@ while True:
     
     
   ntex = tex.copy()
+  #Change to g channel grayscale contrast comparison
+
+  
   if en:
     if mode:
       for x in range(width-1):
