@@ -17,16 +17,18 @@ class Object:
     self.mat = mat
     match mat:
       case 1 | 2:
-        self.tex = pg.surfarray.array3d(pg.image.load(kwargs.get(
-            "tex", ""))).astype(np.uint8)
+        self.tex = pg.surfarray.array3d(pg.image.load(kwargs.get("tex", ""))).astype(np.uint8)
         self.texsize = np.array([len(self.tex) - 1,len(self.tex[0]) - 1]).astype(np.uint16)
+      case 4:
+        self.tex = np.asarray([[kwargs.get("color", (0,255,0))]],np.uint8)
+        self.texsize = np.empty(2, dtype=np.uint16)
       case _:
         self.tex = np.empty((1, 3), dtype=np.uint8)
         self.texsize = np.empty(2, dtype=np.uint16)
     match mat:
       case 2:
-        self.texmap = np.array(kwargs.get("texmap",  np.empty(1))).astype(np.uint32)
-        self.texcoord = np.array(kwargs.get("texcoord",         np.empty(1))).astype(np.float32)
+        self.texmap = np.array(kwargs.get("texmap",np.empty(1))).astype(np.uint32)
+        self.texcoord = np.array(kwargs.get("texcoord",np.empty(1))).astype(np.float32)
         self.clen = len(self.texcoord)
       case 1:
         self.texmap = np.zeros((len(faces), 3)).astype(np.uint32)
@@ -43,7 +45,7 @@ class Object:
 
 @jitclass([("position", float32[:]), ("angle", float32[:]),
            ("vfov", float32), ("hfov", float32), ("zfar", float32),
-           ("znear", float32), ("velocity", float32[:]), ("speed", float32)])
+           ("znear", float32), ("velocity", float32[:]), ("speed", float32), ("msens", float32)])
 class Camera:
   #replace angle with two vars?
   def __init__(self, vfov, position, angle, zfar, znear):
@@ -54,6 +56,7 @@ class Camera:
     self.znear = znear
     self.velocity = np.zeros(3,np.float32)
     self.speed = 10
+    self.msens = 10
 
 
 @jitclass([("dir", float32[:])])
@@ -130,14 +133,18 @@ class Renderer:
         camRay = camRay / math.sqrt(camRay[0]*camRay[0]+camRay[1]*camRay[1]+camRay[2]*camRay[2])
 
         if (n[0] * camRay[0] + n[1] * camRay[1] + n[2] * camRay[2]) < 0:
-          r = n*2*(n[0] * light[0] + n[1] * light[1] + n[2] * light[2]) - light
-          shade = (0.5 * (n[0] * light[0] + n[1] * light[1] + n[2] * light[2]) + 0.5) + max((r[0] * -camRay[0] + r[1] * -camRay[1] + r[2] * -camRay[2]),0)**10
-
           match mat:
-            case 0:
-              color = shade * np.abs(otri[0] * colscale + 25)
-            case 2:
-              uv = texcoord[texmap[i]]
+              case 0|2|4:
+                  r = n*2*(n[0] * light[0] + n[1] * light[1] + n[2] * light[2]) - light
+                  shade = (0.5 * (n[0] * light[0] + n[1] * light[1] + n[2] * light[2]) + 0.5) + max((r[0] * -camRay[0] + r[1] * -camRay[1] + r[2] * -camRay[2]),0)**10
+                  match mat:
+                    case 0:
+                      color = np.minimum(shade * np.abs(otri[0] * colscale + 25),255)
+                    case 2:
+                      uv = texcoord[texmap[i]]
+                    case 4:
+                      #color = np.minimum(shade*np.asarray((0,255,0),np.uint8),255)
+                      color = np.minimum(shade*tex[0,0],255)
 
           #replace vars?
           #replace argsort with numba?
@@ -207,20 +214,30 @@ class Renderer:
 
                         # fog (20 = near 100 = far)
                         if(z > 20): 
-                          per = max(min(z-20, 100),0) / 100
+                          per = min(z-20, 100) / 100
                           frame[x, y] = frame[x, y]*(1-per) + bk*per
-                case 0:
+                case 0 | 4:
                   for x in range(xc1, xc2):
                     z = 1 / (z1 + (x - x1) * zslope + 1e-32)
                     if z < zbuffer[x, y]:
                       zbuffer[x, y] = z
-                      frame[x, y] = color
+                      if(z > 20):
+                          per = min(z-20, 100) / 100
+                          frame[x, y] = color*(1-per) + bk*per
+                      else:
+                          frame[x, y] = color
                 case 3:
                   for x in range(xc1, xc2):
                     z = 1 / (z1 + (x - x1) * zslope + 1e-32)
                     if z < zbuffer[x, y]:
                       zbuffer[x, y] = z
                       frame[x, y] = max(0, 255 - z * 10)
+                case 5:
+                    for x in range(xc1, xc2):
+                        z = 1 / (z1 + (x - x1) * zslope + 1e-32)
+                        if z < zbuffer[x, y]:
+                          zbuffer[x, y] = z
+                          frame[x, y] = tex[0]
 
   """
   @staticmethod
@@ -445,6 +462,12 @@ class Renderer:
     if kdo: angle[0] += elapsed_time / 1.5
       
   def move(self, elapsed_time):
+    if self.mouse:
+      if pg.mouse.get_focused():
+        cursor = pg.mouse.get_pos()
+        self.camera.angle[1] += self.camera.msens * ((cursor[0] - self.centerx) / self.width)
+        self.camera.angle[0] += self.camera.msens * ((cursor[1] - self.centery) / self.height)
+        pg.mouse.set_pos(self.centerx, self.centery)
     keys = pg.key.get_pressed()
     self.smmovecalc(keys[119], keys[115], keys[97], keys[100], keys[101], keys[113], keys[1073741904], keys[1073741903], keys[1073741906], keys[1073741905],self.camera.velocity, elapsed_time, self.camera.position, self.camera.angle, self.camera.speed)
 

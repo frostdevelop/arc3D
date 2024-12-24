@@ -121,4 +121,7 @@ Matcaps for reflection\
 Neon material\
 Material Pass\
 Neon glow (Gaussian)\
-Convolution Kernel Filter
+Convolution Kernel Filter\
+Fresnel Material\
+Solid color Material\
+Frustrum culling\

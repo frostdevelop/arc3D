@@ -19,12 +19,16 @@ def main():
   background = pg.surface.Surface((width, height))
   background.fill((255, 255, 255))
   screen.blit(background, (0, 0))
-  loading = font.render("Loading...", False, (0, 0, 0))
+  loading = font.render("Loading...", True, (0, 0, 0))
   screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
   pg.display.flip()
   #try:
-  iverts, itris, icoord, imap = readobj("models/sponzaoneImproved.obj")
-  sponza = Object(iverts,itris,1,[0, -10, -5],[0,0],tex="models/sponza_diff-0.25.png")
+  #iverts, itris, icoord, imap = readobj("models/sponzaoneImproved.obj")
+  #sponza = Object(iverts,itris,2,[0, -10, -5],[0,0],tex="models/sponza_diff-0.25.png",texcoord=icoord, texmap=imap)
+  iverts, itris, icoord, imap = readobj("models/Hall2.obj")
+  #print(icoord)
+  #sponza = Object(iverts,itris,2,[0, -10, -5],[0,0],tex="models/singlemat.png",texcoord=icoord, texmap=imap)
+  sponza = Object(iverts,itris,4,[0, -5, -5],[0,0],color=(153,183,186)) #for some reason dies on texture
   #except e:
       #print(e)
   
@@ -32,7 +36,7 @@ def main():
 
   scene = Scene([sponza],light,(50, 127, 200))
   camera = Camera(np.pi / 2, (0.0, 1.5, -5.0), (0,0), 1000, 0.5)
-  renderer = Renderer(width, height, camera, [[1, 0], [0, 1], [1, 1]], False)
+  renderer = Renderer(width, height, camera, [[1, 0], [0, 1], [1, 1]], True)
   running = True
 
   while running:
@@ -46,12 +50,7 @@ def main():
           running = False
 
     renderer.move(elapsed_time)
-    #print(camera.velocity)
-    
-    #"""
-
     light.upd((math.sin(pg.time.get_ticks() / 1000), 1, 1))
-    #"""
 
     renderer.render(scene)
     screen.blit(pg.surfarray.make_surface(renderer.surface), (0, 0))
