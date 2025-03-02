@@ -107,7 +107,8 @@ Added and Fixed Colored fog\
 Added Linear interpolation\
 Corrected Smooth movment\
 Corrected Clipping plane transform\
-### R1.2 (//24):
+### R1.2 (//25):
+Added Gamma Correction\
 Indev.
 ### Planned improvements
 Optimizations\

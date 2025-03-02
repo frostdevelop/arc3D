@@ -77,6 +77,9 @@ class Scene:
     self.objects = objects
     self.background = np.asarray(background, dtype=np.uint8)
     self.light = light
+    self.background[0] = math.floor(math.sqrt(self.background[0]/255)*255)
+    self.background[1] = math.floor(math.sqrt(self.background[1]/255)*255)
+    self.background[2] = math.floor(math.sqrt(self.background[2]/255)*255)
 
 
 class Renderer:
@@ -213,9 +216,15 @@ class Renderer:
                         #frame[x, y] = tex[int(uvo[0]*texsize[0]), int(uvo[1]*texsize[1])]
 
                         # fog (20 = near 100 = far)
+                        
                         if(z > 20): 
                           per = min(z-20, 100) / 100
                           frame[x, y] = frame[x, y]*(1-per) + bk*per
+                        
+                        # gamma correction
+                        frame[x, y][0] = math.floor(math.sqrt(frame[x, y][0]/255)*255)
+                        frame[x, y][1] = math.floor(math.sqrt(frame[x, y][1]/255)*255)
+                        frame[x, y][2] = math.floor(math.sqrt(frame[x, y][2]/255)*255)
                 case 0 | 4:
                   for x in range(xc1, xc2):
                     z = 1 / (z1 + (x - x1) * zslope + 1e-32)

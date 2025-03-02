@@ -27,7 +27,7 @@ def main():
   background = pg.surface.Surface((width, height))
   background.fill((255, 255, 255))
   screen.blit(background, (0, 0))
-  loading = font.render("Loading...", False, (0, 0, 0))
+  loading = font.render("Loading...", True, (0, 0, 0))
   screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
   pg.display.flip()
 
