@@ -319,6 +319,8 @@ def torus(screen,info,dimensions,clock,font,font_lg,is_fullscreen):
 
         scene.objects[1].rotation += elapsed_time / 2, elapsed_time
         scene.objects[1].upd()
+        for i in range(len(scene.objects[1].texcoord)):
+            scene.objects[1].texcoord[i] += elapsed_time / 2
         
         positiontext = font.render(
             f'XYZ: {truncate(camera.position[0])} {truncate(camera.position[1])} {truncate(camera.position[2])}',
