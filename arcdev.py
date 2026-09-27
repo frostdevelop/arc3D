@@ -13,20 +13,26 @@ class Object:
     self.vlen = len(self.mverts)
     self.position = np.asarray(pos, np.float32)
     self.rotation = np.asarray(rot, np.float32)
+    self.normals = np.empty((self.flen,3), np.float32)
     self.upd()
+    self.opacity = 1
     self.mat = mat
     match mat:
-      case 1 | 2:
+      case 1 | 2 | 6:
         self.tex = pg.surfarray.array3d(pg.image.load(kwargs.get("tex", ""))).astype(np.uint8)
         self.texsize = np.array([len(self.tex) - 1,len(self.tex[0]) - 1]).astype(np.uint16)
-      case 4:
-        self.tex = np.asarray([[kwargs.get("color", (0,255,0))]],np.uint8)
+      case 4 | 5:
+        if "color" in kwargs:
+            self.tex = np.asarray([[kwargs.get("color", (255,0,0))]],np.uint8)
+        else:
+            color_hdr = np.asarray(kwargs.get("color_hdr",(1,0,0)),np.float32)*255
+            self.tex = np.asarray([[color_hdr]],np.uint8)
         self.texsize = np.empty(2, dtype=np.uint16)
       case _:
         self.tex = np.empty((1, 3), dtype=np.uint8)
         self.texsize = np.empty(2, dtype=np.uint16)
     match mat:
-      case 2:
+      case 2 | 6:
         self.texmap = np.array(kwargs.get("texmap",np.empty(1))).astype(np.uint32)
         self.texcoord = np.array(kwargs.get("texcoord",np.empty(1))).astype(np.float32)
         self.clen = len(self.texcoord)
@@ -42,6 +48,13 @@ class Object:
   def upd(self):
     self.verts = Renderer.rotate(self.mverts, self.rotation[0], self.rotation[1])
     self.verts = Renderer.translate(self.verts, self.position)
+    for i in range(self.flen):
+        otri = self.verts[self.faces[i]]
+        n = np.asarray(((otri[1,1] - otri[0,1])*(otri[2,2] - otri[0,2]) - (otri[1,2] - otri[0,2])*(otri[2,1] - otri[0,1]),-((otri[1,0] - otri[0,0])*(otri[2,2] - otri[0,2]) - (otri[1,2] - otri[0,2])*(otri[2,0] - otri[0,0])),(otri[1,0] - otri[0,0])*(otri[2,1] - otri[0,1]) - (otri[1,1] - otri[0,1])*(otri[2,0] - otri[0,0])),np.float32)
+        n = n / np.linalg.norm(n)
+        self.normals[i,0] = n[0]
+        self.normals[i,1] = n[1]
+        self.normals[i,2] = n[2]
 
 @jitclass([("position", float32[:]), ("angle", float32[:]),
            ("vfov", float32), ("hfov", float32), ("zfar", float32),
@@ -73,13 +86,14 @@ class Light:
 
 class Scene:
 
-  def __init__(self, objects, light, background):
+  def __init__(self, objects, light, background, fog_bounds):
     self.objects = objects
     self.background = np.asarray(background, dtype=np.uint8)
     self.light = light
     self.background[0] = math.floor(math.sqrt(self.background[0]/255)*255)
     self.background[1] = math.floor(math.sqrt(self.background[1]/255)*255)
     self.background[2] = math.floor(math.sqrt(self.background[2]/255)*255)
+    self.fog_bounds = np.asarray(fog_bounds, dtype=np.int32)
 
 
 class Renderer:
@@ -91,8 +105,8 @@ class Renderer:
     self.centerx = width >> 1
     self.centery = height >> 1
     self.surface = np.ones((width, height, 3), dtype=np.uint8)
-    self.nearplane = np.asarray(((0, 0, camera.znear), (0, 0, 1)), np.float32)
     self.zbuffer = np.empty((width, height), dtype=np.float32)
+    self.nearplane = np.asarray(((0, 0, camera.znear), (0, 0, 1)), np.float32)
     self.projection = np.zeros((4, 4), np.float32)
     self.projection[0, 0] = 1 / (np.tan(self.camera.vfov / 2) * (self.width / self.height))
     self.projection[1, 1] = -(1 / np.tan(self.camera.vfov / 2))
@@ -101,6 +115,15 @@ class Renderer:
     self.projection[3, 2] = (-self.camera.zfar * self.camera.znear) / (self.camera.zfar - self.camera.znear)
     self.uv = np.asarray(uv, dtype=np.float32)
     self.mouse = mouse
+    
+  def set_dimensions(self,width,height):
+    self.width = width
+    self.height = height
+    self.centerx = width >> 1
+    self.centery = height >> 1
+    self.surface = np.ones((width, height, 3), dtype=np.uint8)
+    self.zbuffer = np.empty((width, height), dtype=np.float32)
+    self.projection[0, 0] = 1 / (np.tan(self.camera.vfov / 2) * (self.width / self.height))
 
   @staticmethod
   @njit()
@@ -118,7 +141,9 @@ class Renderer:
                  tex,
                  texsize,
                  texmap,
-                 texcoord):
+                 texcoord,
+                 opacity,
+                 fog_bounds):
     match mat:
       case 0:
         colscale = 230 / max(np.abs(verticies))
@@ -129,25 +154,28 @@ class Renderer:
       if (tri[0][0] >= -width and tri[0][0] <= width << 1 and tri[0][1] >= -height and tri[0][1] <= height << 1) or (tri[1][0] >= -width and tri[1][0] <= width << 1 and tri[1][1] >= -height and tri[1][1] <= height << 1) or (tri[2][0] >= -width and tri[2][0] <= width << 1 and tri[2][1] >= -height and tri[2][1] <= height << 1):
         otri = verticies[tris[i]]
 
-        n = np.asarray(((otri[1,1] - otri[0,1])*(otri[2,2] - otri[0,2]) - (otri[1,2] - otri[0,2])*(otri[2,1] - otri[0,1]),-((otri[1,0] - otri[0,0])*(otri[2,2] - otri[0,2]) - (otri[1,2] - otri[0,2])*(otri[2,0] - otri[0,0])),(otri[1,0] - otri[0,0])*(otri[2,1] - otri[0,1]) - (otri[1,1] - otri[0,1])*(otri[2,0] - otri[0,0])),np.float32)
-        n = n / math.sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2])
-
         camRay = otri[0] - camera
-        camRay = camRay / math.sqrt(camRay[0]*camRay[0]+camRay[1]*camRay[1]+camRay[2]*camRay[2])
+        camRay = camRay / np.linalg.norm(camRay)
+        
+        n = np.asarray(((otri[1,1] - otri[0,1])*(otri[2,2] - otri[0,2]) - (otri[1,2] - otri[0,2])*(otri[2,1] - otri[0,1]),-((otri[1,0] - otri[0,0])*(otri[2,2] - otri[0,2]) - (otri[1,2] - otri[0,2])*(otri[2,0] - otri[0,0])),(otri[1,0] - otri[0,0])*(otri[2,1] - otri[0,1]) - (otri[1,1] - otri[0,1])*(otri[2,0] - otri[0,0])),np.float32)
+        n = n / np.linalg.norm(n)
 
         if (n[0] * camRay[0] + n[1] * camRay[1] + n[2] * camRay[2]) < 0:
           match mat:
+              case 6:
+                uv = texcoord[texmap[i]]
+              case 5:
+                color = np.asarray(tex[0,0]*opacity, np.float64)
               case 0|2|4:
                   r = n*2*(n[0] * light[0] + n[1] * light[1] + n[2] * light[2]) - light
                   shade = (0.5 * (n[0] * light[0] + n[1] * light[1] + n[2] * light[2]) + 0.5) + max((r[0] * -camRay[0] + r[1] * -camRay[1] + r[2] * -camRay[2]),0)**10
                   match mat:
                     case 0:
-                      color = np.minimum(shade * np.abs(otri[0] * colscale + 25),255)
+                      color = np.minimum(shade * np.abs(otri[0] * colscale + 25),255)*opacity
                     case 2:
                       uv = texcoord[texmap[i]]
                     case 4:
-                      #color = np.minimum(shade*np.asarray((0,255,0),np.uint8),255)
-                      color = np.minimum(shade*tex[0,0],255)
+                      color = np.minimum(shade*tex[0,0],255)*opacity
 
           #replace vars?
           #replace argsort with numba?
@@ -166,7 +194,7 @@ class Renderer:
           uvslope2 = (uv[ysort[1]] * zmiddle - uv[ysort[0]] * zstart) / (tri[ysort[1]][1] - tri[ysort[0]][1] + 1e-32)
           uvslope3 = (uv[ysort[2]] * zend - uv[ysort[1]] * zmiddle) / (tri[ysort[2]][1] - tri[ysort[1]][1] + 1e-16)
 
-          for y in range(max(0, tri[ysort[0]][1]), min(height, tri[ysort[2]][1] + 1)):
+          for y in range(max(0, int(tri[ysort[0]][1])), min(height, int(tri[ysort[2]][1] + 1))):
             yc = y - tri[ysort[0]][1]
 
             x1 = tri[ysort[0]][0] + xslope1 * yc
@@ -198,55 +226,66 @@ class Renderer:
                     z = 1 / (z1 + (x - x1) * zslope + 1e-32)
                     if z < zbuffer[x, y]:
                       zbuffer[x, y] = z
-                      uvo = (uv1 + (x - x1) * uvslope) * z
-                      if min(uvo) >= 0 and max(uvo) <= 1.1:
-                        #frame[x, y] = np.minimum(shade * tex[int(uvo[0] * texsize[0]),int(uvo[1] * texsize[1])],255)
-                        #"""
-                        #replace minimum with custom numba 3d min?
-                        ltx = int(uvo[0] * texsize[0])
-                        lty = int(uvo[1] * texsize[1])
-                        if ltx > texsize[0] or lty > texsize[1]:
-                            frame[x, y] = np.minimum(shade * tex[ltx,lty],255)
-                        else:
-                          ftx = uvo[0] * texsize[0] - ltx
-                          fty = uvo[1] * texsize[1] - lty
-                          frame[x, y] = np.minimum(shade * ((1-fty)*(ftx*tex[ltx + 1, lty] + (1-ftx)*tex[ltx, lty]) + fty*(ftx*tex[ltx + 1, lty + 1] + (1-ftx)*tex[ltx, lty + 1])),255)
-                        #"""
-                        #max(0, 100 - z) / 100
-                        #frame[x, y] = tex[int(uvo[0]*texsize[0]), int(uvo[1]*texsize[1])]
+                      uvo = ((uv1 + (x - x1) * uvslope) * z) % 1
+                      #frame[x, y] = np.minimum(shade * tex[int(uvo[0] * texsize[0]),int(uvo[1] * texsize[1])],255)
+                      ltx = int(uvo[0] * texsize[0])
+                      lty = int(uvo[1] * texsize[1])
+                      if ltx > texsize[0] or lty > texsize[1]:
+                          frame[x, y] = np.minimum(shade * tex[ltx,lty],255)
+                      else:
+                        ftx = uvo[0] * texsize[0] - ltx
+                        fty = uvo[1] * texsize[1] - lty
+                        frame[x, y] = frame[x, y]*(1-opacity) + np.minimum(shade * ((1-fty)*(ftx*tex[ltx + 1, lty] + (1-ftx)*tex[ltx, lty]) + fty*(ftx*tex[ltx + 1, lty + 1] + (1-ftx)*tex[ltx, lty + 1])),255)*opacity
+                      #frame[x, y] = tex[int(uvo[0]*texsize[0]), int(uvo[1]*texsize[1])]
 
-                        # fog (20 = near 100 = far)
-                        
-                        if(z > 20): 
-                          per = min(z-20, 100) / 100
-                          frame[x, y] = frame[x, y]*(1-per) + bk*per
-                        
-                        # gamma correction
-                        frame[x, y][0] = math.floor(math.sqrt(frame[x, y][0]/255)*255)
-                        frame[x, y][1] = math.floor(math.sqrt(frame[x, y][1]/255)*255)
-                        frame[x, y][2] = math.floor(math.sqrt(frame[x, y][2]/255)*255)
-                case 0 | 4:
+                      # fog (20 = near 100 = far)
+                      
+                      if(z > fog_bounds[0]): 
+                        per = min(z-fog_bounds[0], fog_bounds[1]) / fog_bounds[1]
+                        frame[x, y] = frame[x, y]*(1-per) + bk*per
+                      
+                      # gamma correction
+                      frame[x, y][0] = math.floor(math.sqrt(frame[x, y][0]/255)*255)
+                      frame[x, y][1] = math.floor(math.sqrt(frame[x, y][1]/255)*255)
+                      frame[x, y][2] = math.floor(math.sqrt(frame[x, y][2]/255)*255)
+                case 6:
                   for x in range(xc1, xc2):
                     z = 1 / (z1 + (x - x1) * zslope + 1e-32)
                     if z < zbuffer[x, y]:
                       zbuffer[x, y] = z
-                      if(z > 20):
-                          per = min(z-20, 100) / 100
-                          frame[x, y] = color*(1-per) + bk*per
+                      uvo = ((uv1 + (x - x1) * uvslope) * z) % 1
+                      ltx = int(uvo[0] * texsize[0])
+                      lty = int(uvo[1] * texsize[1])
+                      if ltx > texsize[0] or lty > texsize[1]:
+                          frame[x, y] = np.minimum(tex[ltx,lty],255)
                       else:
-                          frame[x, y] = color
+                        ftx = uvo[0] * texsize[0] - ltx
+                        fty = uvo[1] * texsize[1] - lty
+                        frame[x, y] = frame[x, y]*(1-opacity) + np.minimum((1-fty)*(ftx*tex[ltx + 1, lty] + (1-ftx)*tex[ltx, lty]) + fty*(ftx*tex[ltx + 1, lty + 1] + (1-ftx)*tex[ltx, lty + 1]),255)*opacity
+                        
+                      if(z > fog_bounds[0]): 
+                        per = min(z-fog_bounds[0], fog_bounds[1]) / fog_bounds[1]
+                        frame[x, y] = frame[x, y]*(1-per) + bk*per
+                        
+                      frame[x, y][0] = math.floor(math.sqrt(frame[x, y][0]/255)*255)
+                      frame[x, y][1] = math.floor(math.sqrt(frame[x, y][1]/255)*255)
+                      frame[x, y][2] = math.floor(math.sqrt(frame[x, y][2]/255)*255)
+                case 0 | 4 | 5:
+                  for x in range(xc1, xc2):
+                    z = 1 / (z1 + (x - x1) * zslope + 1e-32)
+                    if z < zbuffer[x, y]:
+                      zbuffer[x, y] = z
+                      if(z > fog_bounds[0]): 
+                          per = min(z-fog_bounds[0], fog_bounds[1]) / fog_bounds[1]
+                          frame[x, y] = frame[x, y]*(1-opacity) + color*(1-per) + bk*per
+                      else:
+                          frame[x, y] = frame[x, y]*(1-opacity) + color
                 case 3:
                   for x in range(xc1, xc2):
                     z = 1 / (z1 + (x - x1) * zslope + 1e-32)
                     if z < zbuffer[x, y]:
                       zbuffer[x, y] = z
                       frame[x, y] = max(0, 255 - z * 10)
-                case 5:
-                    for x in range(xc1, xc2):
-                        z = 1 / (z1 + (x - x1) * zslope + 1e-32)
-                        if z < zbuffer[x, y]:
-                          zbuffer[x, y] = z
-                          frame[x, y] = tex[0]
 
   """
   @staticmethod
@@ -285,7 +324,7 @@ class Renderer:
       nverts[i][2] = verticies[i][2]
     return nverts
   """
-  #"""
+
   @staticmethod
   @njit()
   def projectf(verticies, projection, centerx, centery, pos, yang, xang):
@@ -298,14 +337,13 @@ class Renderer:
     for i in range(vertlen):
       zt = (verticies[i][1] - pos[1]) * xsin + ((verticies[i][2] - pos[2]) * ycos - (verticies[i][0] - pos[0]) * ysin) * xcos
       if zt < 0:
-        nverts[i][0] = 100000
+        nverts[i][0] = 1e16
         nverts[i][1] = nverts[i][0]
         continue
       nverts[i][1] = int(((((verticies[i][1] - pos[1]) * xcos - ((verticies[i][2] - pos[2]) * ycos - (verticies[i][0] - pos[0]) * ysin) * xsin)*projection[1, 1])/zt + 1) * centery)
       nverts[i][0] = int(((((verticies[i][0] - pos[0]) * ycos + (verticies[i][2] - pos[2]) * ysin)*projection[0, 0])/zt + 1) * centerx)
       nverts[i][2] = zt
     return nverts
-  #"""
 
   @staticmethod
   @njit()
@@ -315,7 +353,6 @@ class Renderer:
     return np.asarray(((pos[0]+(npla[0,0] * math.cos(ang[1]) + (npla[0,1] * math.sin(ang[0]) + npla[0,2] * math.cos(ang[0])) * math.sin(ang[1])), pos[1]+(npla[0,1] * math.cos(ang[0]) - npla[0,2] * math.sin(ang[0])), pos[2]+(npla[0,1] * math.sin(ang[0]) + npla[0,2] * math.cos(ang[0]) * math.cos(ang[1]) - npla[0,0] * math.sin(ang[1]))), (npla[1,0] * math.cos(ang[1]) + (npla[1,1] * math.sin(ang[0]) + npla[1,2] * math.cos(ang[0])) * math.sin(ang[1]), npla[1,1] * math.cos(ang[0]) - npla[1,2] * math.sin(ang[0]), (npla[1,1] * math.sin(ang[0]) + npla[1,2] * math.cos(ang[0])) * math.cos(ang[1]) - npla[1,0] * math.sin(ang[1]))),np.float32)
 
   def render(self, scene):
-    #translateval = np.asarray(list(map(lambda x: -x, self.camera.position)),dtype=np.float32)
     nplane = self._renfil(self.zbuffer, self.surface, scene.background, self.camera.position, self.camera.angle, self.nearplane)
     for object in scene.objects:
       '''
@@ -333,16 +370,19 @@ class Renderer:
         rmat = object[0].mat
       '''
 
+      rmat = object.mat
+      match rmat:
+        case 1:
+          rmat = 2
+          
+      if object.opacity == 0:
+        continue
+
       rfaces, overts, rmap, rcoord = self.cliptri(nplane, object.mat, self.uv, object.faces,object.verts, object.texcoord, object.texmap, object.flen, object.vlen, object.clen)
 
       match len(rfaces):
         case 0:
           continue
-
-      rmat = object.mat
-      match rmat:
-        case 1:
-          rmat = 2
 
       """
       rverts = self.proj(self.rotate(self.translate(overts, translateval), -self.camera.yang,-self.camera.xang))
@@ -350,7 +390,7 @@ class Renderer:
       rcoord = object[0].texcoord
       """
 
-      self.rendertris(scene.background, overts, self.projectf(overts,self.projection, self.centerx,self.centery,self.camera.position,self.camera.angle[1],self.camera.angle[0]), rfaces, self.camera.position, scene.light.dir, self.width, self.height, self.surface, self.zbuffer, rmat, object.tex, object.texsize, rmap, rcoord)
+      self.rendertris(scene.background, overts, self.projectf(overts,self.projection, self.centerx,self.centery,self.camera.position,self.camera.angle[1],self.camera.angle[0]), rfaces, self.camera.position, scene.light.dir, self.width, self.height, self.surface, self.zbuffer, rmat, object.tex, object.texsize, rmap, rcoord, object.opacity, scene.fog_bounds)
 
   @staticmethod
   @njit()
@@ -520,7 +560,7 @@ class Renderer:
         case 0:
           nfaces[find] = face
           match mat:
-            case 2:
+            case 2 | 6:
               nmap[find] = texmap[i]
           find += 1
           continue
@@ -531,8 +571,8 @@ class Renderer:
           nfaces[find,vout[0]] = vind
           vind += 1
           match mat:
-            case 2:
-              coord[cind] = t * (coord[texmap[i, vin[0]]] - coord[texmap[i, vout[0]]]) + coord[texmap[i, vin[0]]]
+            case 2 | 6:
+              ncoord[cind] = t * (ncoord[texmap[i, vin[0]]] - ncoord[texmap[i, vout[0]]]) + ncoord[texmap[i, vin[0]]]
               nmap[find,vin[0]] = texmap[i, vin[0]]
               nmap[find,vin[1]] = texmap[i, vin[1]]
               nmap[find,vout[0]] = cind
@@ -544,7 +584,7 @@ class Renderer:
               nmap[find,vout[0]] = cind
               vind += 1
               cind += 1
-              coord[cind] = t * (coord[texmap[i, vin[1]]] - coord[texmap[i, vout[0]]]) + coord[texmap[i, vin[1]]]
+              ncoord[cind] = t * (ncoord[texmap[i, vin[1]]] - ncoord[texmap[i, vout[0]]]) + ncoord[texmap[i, vin[1]]]
               nmap[find,vin[0]] = texmap[i, vin[1]]
               nmap[find,vin[1]] = cind
               cind += 1
@@ -564,12 +604,12 @@ class Renderer:
           nfaces[find,vout[0]] = vind
           vind += 1
           match mat:
-            case 2:
-              coord[cind] = t * (coord[texmap[i, vin[0]]] - coord[texmap[i, vout[0]]]) + coord[texmap[i, vin[0]]] 
+            case 2 | 6:
+              ncoord[cind] = t * (ncoord[texmap[i, vin[0]]] - ncoord[texmap[i, vout[0]]]) + ncoord[texmap[i, vin[0]]] 
               nmap[find,vout[0]] = cind
               verts[vind], t = intersect(tri[vout[1]], tri[vin[0]], plane[1], plane[0])
               cind += 1
-              coord[cind] = t * (coord[texmap[i, vin[0]]] - coord[texmap[i, vout[1]]]) + coord[texmap[i, vin[0]]]
+              ncoord[cind] = t * (ncoord[texmap[i, vin[0]]] - ncoord[texmap[i, vout[1]]]) + ncoord[texmap[i, vin[0]]]
               nmap[find,vin[0]] = texmap[i, vin[0]]
               nmap[find,vout[1]] = cind
               cind += 1
@@ -584,7 +624,7 @@ class Renderer:
         case 3:
           continue
 
-    return nfaces[:find], verts[:vind], nmap[:find], coord[:cind]
+    return nfaces[:find], verts[:vind], nmap[:find], ncoord[:cind]
 
 
 @njit()

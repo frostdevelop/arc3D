@@ -1,9 +1,11 @@
-![Arc3D logo (1/16/24)](https://github.com/user-attachments/assets/2036a71c-95fd-43ff-b8f6-196b647d4500)
+![Arc3D logo (1/16/24)](/images/arc3d.png)
 # arc3D
 the Arc3D python software rendering repository (Originally on Replit in Jan 9, 2024)
-![Funny demo](/images/Demo1.1.png)\
-Release 1.0:\
 ![Funny demo](/images/Demo.png)
+![Sponza](/images/Sponza.png)
+![Toad](/images/Toad.png)
+![Hall](/images/Hall.png)
+![Torus](/images/Torus.png)
 ## Features:
 Numba optimized funcations\
 Clipping\
@@ -107,15 +109,20 @@ Added and Fixed Colored fog\
 Added Linear interpolation\
 Corrected Smooth movment\
 Corrected Clipping plane transform\
-### R1.2 (//25):
+### R1.2 (//26):
 Added Gamma Correction\
+Improved Obj importation\
+More materials\
+Transparency\
+Fog Bounds\
 Indev.
 ### Planned improvements
+Material System Rework\
 Optimizations\
 FXAA\
 Goraud shading\
 Phong shading\
-Point lighting\aw
+Point lighting\
 Normal mapping\
 Skyboxes\
 Matcaps for reflection\
@@ -126,3 +133,7 @@ Convolution Kernel Filter\
 Fresnel Material\
 Solid color Material\
 Frustrum culling\
+Quad Fixing\
+Alpha Buffer\
+A coherent render pipeline\
+Smooth Shading\
