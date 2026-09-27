@@ -22,11 +22,10 @@ def main():
   pg.init()
   screen = pg.display.set_mode((1280, 720), pg.RESIZABLE)
   info = pg.display.Info()
-  width = info.current_w
-  height = info.current_h
+  dimensions = [info.current_w,info.current_h]
   clock = pg.time.Clock()
   font = pg.font.Font(pg.font.get_default_font(), 25)
-  font_large = pg.font.Font(pg.font.get_default_font(), 35)
+  font_lg = pg.font.Font(pg.font.get_default_font(), 35)
   pg.display.set_caption("Arc3D Demo")
   pg.mouse.set_visible(0)
   pg.display.set_icon(pg.image.load('brand/arc3d.png'))
@@ -38,8 +37,6 @@ def main():
   selection = 0
   while running:
       selecting = True
-      width = info.current_w
-      height = info.current_h
       while selecting:
         elapsed_time = clock.tick() * 0.001
 
@@ -54,27 +51,27 @@ def main():
             elif event.key == pg.K_F11:
                 is_fullscreen = not is_fullscreen
                 if is_fullscreen:
-                    screen = pg.display.set_mode((800, 600), pg.FULLSCREEN)
-                    width = info.current_w
-                    height = info.current_h
+                    screen = pg.display.set_mode((1280, 720), pg.FULLSCREEN)
+                    dimensions[0] = info.current_w
+                    dimensions[1] = info.current_h
                 else:
-                    screen = pg.display.set_mode((info.current_w, info.current_h))
-                    width = info.current_w
-                    height = info.current_h
+                    screen = pg.display.set_mode((info.current_w, info.current_h), pg.RESIZABLE)
+                    dimensions[0] = info.current_w
+                    dimensions[1] = info.current_h
             elif event.key == pg.K_UP:
-                selection = max(selection-1,0)
+                selection = (selection-1) % len(selections)
             elif event.key == pg.K_DOWN:
-                selection = min(selection+1,len(selections)-1)
+                selection = (selection+1) % len(selections)
           elif event.type == pg.VIDEORESIZE and not is_fullscreen:
             screen = pg.display.set_mode((event.w, event.h), pg.RESIZABLE)
-            width = event.w
-            height = event.h
+            dimensions[0] = event.w
+            dimensions[1] = event.h
 
         screen.fill((0, 0, 0))
         selection_texts = []
         selection_width = 400
         selection_height = padding
-        title_text = font_large.render("Arc3D Demos", True, (255,255,0))
+        title_text = font_lg.render("Arc3D Demos", True, (255,255,0))
         title_text_height = title_text.get_height()
         selection_height += title_text_height+int(padding*2.5)
         title_text_width = title_text.get_width()
@@ -93,30 +90,32 @@ def main():
         for text in selection_texts:
             selection_surface.blit(text[0], (padding,text[1]))
         
-        screen.blit(selection_surface, (int(width/2 - selection_width/2),int(height/2 - selection_height/2)))
+        screen.blit(selection_surface, (int(dimensions[0]/2 - selection_width/2),int(dimensions[1]/2 - selection_height/2)))
         
         pg.display.flip()
         
       print(f"Selected {selections[selection]}")
       match(selection):
         case 0:
-            testing(screen,info,width,height,clock,font,is_fullscreen)
+            testing(screen,info,dimensions,clock,font,font_lg,is_fullscreen)
         case 1:
-            torus(screen,info,width,height,clock,font,is_fullscreen)
+            torus(screen,info,dimensions,clock,font,font_lg,is_fullscreen)
         case 2:
-            sponza(screen,info,width,height,clock,font,is_fullscreen)
+            sponza(screen,info,dimensions,clock,font,font_lg,is_fullscreen)
         case 3:
-            toad(screen,info,width,height,clock,font,is_fullscreen)
+            toad(screen,info,dimensions,clock,font,font_lg,is_fullscreen)
         case 4:
-            hall(screen,info,width,height,clock,font,is_fullscreen)
+            hall(screen,info,dimensions,clock,font,font_lg,is_fullscreen)
         case _:
             return
-  
-def testing(screen,info,width,height,clock,font,is_fullscreen):
+        
+      is_fullscreen = bool(screen.get_flags() & pg.FULLSCREEN)
+
+def testing(screen,info,dimensions,clock,font,font_lg,is_fullscreen):
   compiled = False
   screen.fill((0, 0, 0))
-  loading = font.render("Parsing Model...", True, (255, 255, 0))
-  screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
+  loading = font_lg.render("Parsing Model...", True, (255, 255, 0))
+  screen.blit(loading, (dimensions[0] / 2 - loading.get_width() / 2, dimensions[1] / 2 - loading.get_height() / 2))
   pg.display.flip()
 
   scube = Object(np.asarray([[-2, -2, -2], [2, 2, -2], [-2, 2, -2],[2, -2, -2], [-2, -2, 2], [2, 2, 2], [-2, 2, 2],[2, -2, 2]], dtype=np.float32),np.array([[0, 2, 3], [2, 1, 3], [7, 5, 4], [5, 6, 4], [4, 6, 0], [6, 2, 0], [3, 1, 7], [1, 5, 7], [7, 4, 0],[0, 3, 7], [2, 6, 1], [6, 5, 1]], dtype=np.uint16),2,[10,15,10],[0,0],tex="models/sheepy.png",texcoord=[[0, 0], [0, 1], [1, 0], [1, 1]],texmap=[[0, 1, 2], [1, 3, 2], [0, 1, 2], [1, 3, 2], [0, 1, 2],[1, 3, 2], [0, 1, 2], [1, 3, 2], [2, 0, 1], [1, 3, 2],[0, 1, 2], [1, 3, 2]])
@@ -139,14 +138,14 @@ def testing(screen,info,width,height,clock,font,is_fullscreen):
   #camera = Camera(np.pi/8,[0,0,-10],0,0, width, height)
   camera = Camera(np.pi / 2, (0.0, 1.5, -5.0), (0,0), 1000, 0.5)
   #camera = Camera(np.pi / 1.1, (0.0, 1.5, -5.0), (0,0), 1000, 0.5)
-  renderer = Renderer(width, height, camera, [[1, 0], [0, 1], [1, 1]], False)
+  renderer = Renderer(dimensions[0], dimensions[1], camera, [[1, 0], [0, 1], [1, 1]], False)
   running = True
 
   print("Models loaded.")
   
   screen.fill((0, 0, 0))
-  loading = font.render("Compiling...", True, (255, 255, 0))
-  screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
+  loading = font_lg.render("Compiling...", True, (255, 255, 0))
+  screen.blit(loading, (dimensions[0] / 2 - loading.get_width() / 2, dimensions[1] / 2 - loading.get_height() / 2))
   pg.display.flip()
   
   while running:
@@ -161,19 +160,19 @@ def testing(screen,info,width,height,clock,font,is_fullscreen):
         elif event.key == pg.K_F11:
             is_fullscreen = not is_fullscreen
             if is_fullscreen:
-                screen = pg.display.set_mode((800, 600), pg.FULLSCREEN)
+                screen = pg.display.set_mode((1280, 720), pg.FULLSCREEN)
             else:
-                screen = pg.display.set_mode((info.current_w, info.current_h))
-            width = info.current_w
-            height = info.current_h
+                screen = pg.display.set_mode((info.current_w, info.current_h), pg.RESIZABLE)
+            dimensions[0] = info.current_w
+            dimensions[1] = info.current_h
             
-            renderer.set_dimensions(width,height)
+            renderer.set_dimensions(dimensions)
       elif event.type == pg.VIDEORESIZE and not is_fullscreen:
         screen = pg.display.set_mode((event.w, event.h), pg.RESIZABLE)
-        width = event.w
-        height = event.h
+        dimensions[0] = event.w
+        dimensions[1] = event.h
         
-        renderer.set_dimensions(width,height)
+        renderer.set_dimensions(dimensions)
 
     renderer.move(elapsed_time)
     
@@ -197,7 +196,7 @@ def testing(screen,info,width,height,clock,font,is_fullscreen):
     text_surface.set_alpha(128)
     text_surface.blit(positiontext, (10, 10))
     text_surface.blit(angletext, (10, 50))
-    text_surface.blit(fps, (10, 90))
+    text_surface.blit(fps, (10, 90))    
     screen.blit(text_surface, (0,0))
     pg.display.flip()
     
@@ -205,17 +204,17 @@ def testing(screen,info,width,height,clock,font,is_fullscreen):
         print("Render functions compiled.")
         compiled = True
 
-def torus(screen,info,width,height,clock,font,is_fullscreen):
+def torus(screen,info,dimensions,clock,font,font_lg,is_fullscreen):
     objects = []
 
     screen.fill((0, 0, 0))
-    loading = font.render("Parsing Model...", True, (255, 255, 0))
-    screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
+    loading = font_lg.render("Parsing Model...", True, (255, 255, 0))
+    screen.blit(loading, (dimensions[0] / 2 - loading.get_width() / 2, dimensions[1] / 2 - loading.get_height() / 2))
     obj_objects, obj_materials = read_obj("models/torus_map/model.obj")
     
     screen.fill((0, 0, 0))
-    loading = font.render("Loading Map...", True, (255, 255, 0))
-    screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
+    loading = font_lg.render("Loading Map...", True, (255, 255, 0))
+    screen.blit(loading, (dimensions[0] / 2 - loading.get_width() / 2, dimensions[1] / 2 - loading.get_height() / 2))
     objects.append(Object(
         obj_objects["Columns"]["verts"],
         obj_objects["Columns"]["tris"],
@@ -228,8 +227,8 @@ def torus(screen,info,width,height,clock,font,is_fullscreen):
     ))
     
     screen.fill((0, 0, 0))
-    loading = font.render("Loading Torus...", True, (255, 255, 0))
-    screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
+    loading = font_lg.render("Loading Torus...", True, (255, 255, 0))
+    screen.blit(loading, (dimensions[0] / 2 - loading.get_width() / 2, dimensions[1] / 2 - loading.get_height() / 2))
     pg.display.flip()
     objects.append(Object(
         obj_objects["Torus"]["verts"],
@@ -246,14 +245,14 @@ def torus(screen,info,width,height,clock,font,is_fullscreen):
 
     scene = Scene(objects,light,(0, 0, 0),(20,100))
     camera = Camera(np.pi / 2, (-28.0805, 60.5462, -170.792), (0,np.pi), 1000, 0.5)
-    renderer = Renderer(width, height, camera, [[1, 0], [0, 1], [1, 1]], True)
+    renderer = Renderer(dimensions[0], dimensions[1], camera, [[1, 0], [0, 1], [1, 1]], True)
     running = True
 
     print("Models loaded.")
 
     screen.fill((0, 0, 0))
-    loading = font.render("Compiling...", True, (255, 255, 0))
-    screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
+    loading = font_lg.render("Compiling...", True, (255, 255, 0))
+    screen.blit(loading, (dimensions[0] / 2 - loading.get_width() / 2, dimensions[1] / 2 - loading.get_height() / 2))
     pg.display.flip()
 
     collected = False
@@ -271,19 +270,19 @@ def torus(screen,info,width,height,clock,font,is_fullscreen):
             elif event.key == pg.K_F11:
                 is_fullscreen = not is_fullscreen
                 if is_fullscreen:
-                    screen = pg.display.set_mode((800, 600), pg.FULLSCREEN)
+                    screen = pg.display.set_mode((1280, 720), pg.FULLSCREEN)
                 else:
-                    screen = pg.display.set_mode((info.current_w, info.current_h))
-                width = info.current_w
-                height = info.current_h
+                    screen = pg.display.set_mode((info.current_w, info.current_h), pg.RESIZABLE)
+                dimensions[0] = info.current_w
+                dimensions[1] = info.current_h
                 
-                renderer.set_dimensions(width,height)
+                renderer.set_dimensions(dimensions)
           elif event.type == pg.VIDEORESIZE and not is_fullscreen:
             screen = pg.display.set_mode((event.w, event.h), pg.RESIZABLE)
-            width = event.w
-            height = event.h
+            dimensions[0] = event.w
+            dimensions[1] = event.h
             
-            renderer.set_dimensions(width,height)
+            renderer.set_dimensions(dimensions)
 
         renderer.move(elapsed_time)
         light.upd((math.sin(pg.time.get_ticks() / 1000), 1, 1))
@@ -292,7 +291,7 @@ def torus(screen,info,width,height,clock,font,is_fullscreen):
         screen.blit(pg.surfarray.make_surface(renderer.surface), (0, 0))
 
         billboard_verts = renderer.projectf(np.asarray([[-28.0805, 60.5462, -190.792]], dtype=np.float32),renderer.projection, renderer.centerx,renderer.centery,renderer.camera.position,renderer.camera.angle[1],renderer.camera.angle[0])
-        if billboard_verts[0][2] < 10 and not collected and (billboard_verts[0][0] < width and billboard_verts[0][0] > 0 and billboard_verts[0][1] < height and billboard_verts[0][1] > 0):
+        if billboard_verts[0][2] < 10 and not collected and (billboard_verts[0][0] < dimensions[0] and billboard_verts[0][0] > 0 and billboard_verts[0][1] < dimensions[1] and billboard_verts[0][1] > 0):
             keys = pg.key.get_pressed()
             
             text = font.render("Hold (T) to collect", False, (255,255,255))
@@ -344,22 +343,22 @@ def torus(screen,info,width,height,clock,font,is_fullscreen):
             collected_display, False,
             (255, 255, 255))
         collected_text.set_alpha(128)
-        screen.blit(collected_text, (width-10-collected_text.get_width(), 10))
+        screen.blit(collected_text, (dimensions[0]-10-collected_text.get_width(), 10))
         pg.display.flip()
 
 
-def hall(screen,info,width,height,clock,font,is_fullscreen):
+def hall(screen,info,dimensions,clock,font,font_lg,is_fullscreen):
   screen.fill((0, 0, 0))
-  loading = font.render("Parsing Model...", True, (255, 255, 0))
-  screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
+  loading = font_lg.render("Parsing Model...", True, (255, 255, 0))
+  screen.blit(loading, (dimensions[0] / 2 - loading.get_width() / 2, dimensions[1] / 2 - loading.get_height() / 2))
   pg.display.flip()
   objects = []
   
   obj_objects, obj_materials = read_obj("models/hall/LargeHall.obj")
   for object in obj_objects:
     screen.fill((0, 0, 0))
-    loading = font.render(f"Loading {object}...", True, (255, 255, 0))
-    screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
+    loading = font_lg.render(f"Loading {object}...", True, (255, 255, 0))
+    screen.blit(loading, (dimensions[0] / 2 - loading.get_width() / 2, dimensions[1] / 2 - loading.get_height() / 2))
     pg.display.flip()
     if "tex_diff" in obj_materials[obj_objects[object]["mat"]]:
         objects.append(Object(
@@ -396,14 +395,14 @@ def hall(screen,info,width,height,clock,font,is_fullscreen):
 
   scene = Scene(objects,light,(0,0,0),(30,100))
   camera = Camera(np.pi / 2, (-60, 8, 5), (0,-np.pi/2), 1000, 0.5)
-  renderer = Renderer(width, height, camera, [[1, 0], [0, 1], [1, 1]], True)
+  renderer = Renderer(dimensions[0], dimensions[1], camera, [[1, 0], [0, 1], [1, 1]], True)
   running = True
   
   print("Models loaded.")
   
   screen.fill((0, 0, 0))
-  loading = font.render("Compiling...", True, (255, 255, 0))
-  screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
+  loading = font_lg.render("Compiling...", True, (255, 255, 0))
+  screen.blit(loading, (dimensions[0] / 2 - loading.get_width() / 2, dimensions[1] / 2 - loading.get_height() / 2))
   pg.display.flip()
   
   while running:
@@ -420,19 +419,19 @@ def hall(screen,info,width,height,clock,font,is_fullscreen):
         elif event.key == pg.K_F11:
             is_fullscreen = not is_fullscreen
             if is_fullscreen:
-                screen = pg.display.set_mode((800, 600), pg.FULLSCREEN)
+                screen = pg.display.set_mode((1280, 720), pg.FULLSCREEN)
             else:
-                screen = pg.display.set_mode((info.current_w, info.current_h))
-            width = info.current_w
-            height = info.current_h
+                screen = pg.display.set_mode((info.current_w, info.current_h), pg.RESIZABLE)
+            dimensions[0] = info.current_w
+            dimensions[1] = info.current_h
             
-            renderer.set_dimensions(width,height)
+            renderer.set_dimensions(dimensions)
       elif event.type == pg.VIDEORESIZE and not is_fullscreen:
         screen = pg.display.set_mode((event.w, event.h), pg.RESIZABLE)
-        width = event.w
-        height = event.h
+        dimensions[0] = event.w
+        dimensions[1] = event.h
         
-        renderer.set_dimensions(width,height)
+        renderer.set_dimensions(dimensions)
 
     renderer.move(elapsed_time)
 
@@ -453,10 +452,10 @@ def hall(screen,info,width,height,clock,font,is_fullscreen):
     screen.blit(text_surface, (0,0))
     pg.display.flip()
     
-def sponza(screen,info,width,height,clock,font,is_fullscreen):
+def sponza(screen,info,dimensions,clock,font,font_lg,is_fullscreen):
   screen.fill((0, 0, 0))
-  loading = font.render("Parsing Model...", True, (255, 255, 0))
-  screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
+  loading = font_lg.render("Parsing Model...", True, (255, 255, 0))
+  screen.blit(loading, (dimensions[0] / 2 - loading.get_width() / 2, dimensions[1] / 2 - loading.get_height() / 2))
   pg.display.flip()
   
   iverts, itris, icoord, imap = readobj("models/sponzaoneDecimatedScaled.obj")
@@ -466,14 +465,14 @@ def sponza(screen,info,width,height,clock,font,is_fullscreen):
 
   scene = Scene([sponza],light,(50, 127, 200),(50,200))
   camera = Camera(np.pi / 2, (0.0, 1.5, -5.0), (0,0), 1000, 0.5)
-  renderer = Renderer(width, height, camera, [[1, 0], [0, 1], [1, 1]], True)
+  renderer = Renderer(dimensions[0], dimensions[1], camera, [[1, 0], [0, 1], [1, 1]], True)
   running = True
   
   print("Models loaded.")
   
   screen.fill((0, 0, 0))
-  loading = font.render("Compiling...", True, (255, 255, 0))
-  screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
+  loading = font_lg.render("Compiling...", True, (255, 255, 0))
+  screen.blit(loading, (dimensions[0] / 2 - loading.get_width() / 2, dimensions[1] / 2 - loading.get_height() / 2))
   pg.display.flip()
   
   while running:
@@ -488,19 +487,19 @@ def sponza(screen,info,width,height,clock,font,is_fullscreen):
         elif event.key == pg.K_F11:
             is_fullscreen = not is_fullscreen
             if is_fullscreen:
-                screen = pg.display.set_mode((800, 600), pg.FULLSCREEN)
+                screen = pg.display.set_mode((1280, 720), pg.FULLSCREEN)
             else:
-                screen = pg.display.set_mode((info.current_w, info.current_h))
-            width = info.current_w
-            height = info.current_h
+                screen = pg.display.set_mode((info.current_w, info.current_h), pg.RESIZABLE)
+            dimensions[0] = info.current_w
+            dimensions[1] = info.current_h
             
-            renderer.set_dimensions(width,height)
+            renderer.set_dimensions(dimensions)
       elif event.type == pg.VIDEORESIZE and not is_fullscreen:
         screen = pg.display.set_mode((event.w, event.h), pg.RESIZABLE)
-        width = event.w
-        height = event.h
+        dimensions[0] = event.w
+        dimensions[1] = event.h
         
-        renderer.set_dimensions(width,height)
+        renderer.set_dimensions(dimensions)
 
     renderer.move(elapsed_time)
     light.upd((math.sin(pg.time.get_ticks() / 1000), 1, 1))
@@ -523,18 +522,18 @@ def sponza(screen,info,width,height,clock,font,is_fullscreen):
     pg.display.flip()
 
 
-def toad(screen,info,width,height,clock,font,is_fullscreen):
+def toad(screen,info,dimensions,clock,font,font_lg,is_fullscreen):
   screen.fill((0, 0, 0))
-  loading = font.render("Parsing Model...", True, (255, 255, 0))
-  screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
+  loading = font_lg.render("Parsing Model...", True, (255, 255, 0))
+  screen.blit(loading, (dimensions[0] / 2 - loading.get_width() / 2, dimensions[1] / 2 - loading.get_height() / 2))
   pg.display.flip()
   objects = []
   
   obj_objects, obj_materials = read_obj("models/toad/model.obj")
   for object in obj_objects:
     screen.fill((0, 0, 0))
-    loading = font.render(f"Loading {object}...", True, (255, 255, 0))
-    screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
+    loading = font_lg.render(f"Loading {object}...", True, (255, 255, 0))
+    screen.blit(loading, (dimensions[0] / 2 - loading.get_width() / 2, dimensions[1] / 2 - loading.get_height() / 2))
     pg.display.flip()
     if "tex_diff" in obj_materials[obj_objects[object]["mat"]]:
         objects.append(Object(
@@ -561,14 +560,14 @@ def toad(screen,info,width,height,clock,font,is_fullscreen):
 
   scene = Scene(objects,light,(50, 127, 200),(100,200))
   camera = Camera(np.pi / 2, (0.0, 50, 50), (0,np.pi), 1000, 0.5)
-  renderer = Renderer(width, height, camera, [[1, 0], [0, 1], [1, 1]], True)
+  renderer = Renderer(dimensions[0], dimensions[1], camera, [[1, 0], [0, 1], [1, 1]], True)
   running = True
   
   print("Models loaded.")
   
   screen.fill((0, 0, 0))
-  loading = font.render("Compiling...", True, (255, 255, 0))
-  screen.blit(loading, (width / 2 - loading.get_width() / 2, height / 2 - loading.get_height() / 2))
+  loading = font_lg.render("Compiling...", True, (255, 255, 0))
+  screen.blit(loading, (dimensions[0] / 2 - loading.get_width() / 2, dimensions[1] / 2 - loading.get_height() / 2))
   pg.display.flip()
   
   while running:
@@ -585,19 +584,19 @@ def toad(screen,info,width,height,clock,font,is_fullscreen):
         elif event.key == pg.K_F11:
             is_fullscreen = not is_fullscreen
             if is_fullscreen:
-                screen = pg.display.set_mode((800, 600), pg.FULLSCREEN)
+                screen = pg.display.set_mode((1280, 720), pg.FULLSCREEN)
             else:
-                screen = pg.display.set_mode((info.current_w, info.current_h))
-            width = info.current_w
-            height = info.current_h
+                screen = pg.display.set_mode((info.current_w, info.current_h), pg.RESIZABLE)
+            dimensions[0] = info.current_w
+            dimensions[1] = info.current_h
             
-            renderer.set_dimensions(width,height)
+            renderer.set_dimensions(dimensions)
       elif event.type == pg.VIDEORESIZE and not is_fullscreen:
         screen = pg.display.set_mode((event.w, event.h), pg.RESIZABLE)
-        width = event.w
-        height = event.h
+        dimensions[0] = event.w
+        dimensions[1] = event.h
         
-        renderer.set_dimensions(width,height)
+        renderer.set_dimensions(dimensions)
 
     renderer.move(elapsed_time)
     light.upd((math.sin(pg.time.get_ticks() / 1000), 1, 1))

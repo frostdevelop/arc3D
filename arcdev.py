@@ -116,13 +116,13 @@ class Renderer:
     self.uv = np.asarray(uv, dtype=np.float32)
     self.mouse = mouse
     
-  def set_dimensions(self,width,height):
-    self.width = width
-    self.height = height
-    self.centerx = width >> 1
-    self.centery = height >> 1
-    self.surface = np.ones((width, height, 3), dtype=np.uint8)
-    self.zbuffer = np.empty((width, height), dtype=np.float32)
+  def set_dimensions(self,dimensions):
+    self.width = dimensions[0]
+    self.height = dimensions[1]
+    self.centerx = self.width >> 1
+    self.centery = self.height >> 1
+    self.surface = np.ones((self.width, self.height, 3), dtype=np.uint8)
+    self.zbuffer = np.empty((self.width, self.height), dtype=np.float32)
     self.projection[0, 0] = 1 / (np.tan(self.camera.vfov / 2) * (self.width / self.height))
 
   @staticmethod
